@@ -1,0 +1,118 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTE</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+        #signatureCanvas {
+            border: 1px solid #ccc;
+            cursor: crosshair;
+        }
+        #controls {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h3 class="mt-4">Silakan Tanda Tangan</h3>
+
+        <canvas id="signatureCanvas" width="400" height="200"></canvas>
+
+        <div id="controls" class="mt-3">
+            <button id="clearBtn" class="btn btn-outline-warning">Ulangi Tanda Tangan</button>
+            <button id="copyBtn" class="btn btn-success">Salin ke Dokumen</button>
+            <p id="message" class="mt-2"></p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('signatureCanvas');
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+
+        function getXY(canvas, event) {
+            const rect = canvas.getBoundingClientRect();
+            if (event.touches) {
+                return {
+                    x: event.touches[0].clientX - rect.left,
+                    y: event.touches[0].clientY - rect.top
+                };
+            } else {
+                return {
+                    x: event.clientX - rect.left,
+                    y: event.clientY - rect.top
+                };
+            }
+        }
+
+        function startDrawing(event) {
+            drawing = true;
+            const { x, y } = getXY(canvas, event);
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            event.preventDefault();
+        }
+
+        function stopDrawing() {
+            drawing = false;
+        }
+
+        function draw(event) {
+            if (!drawing) return;
+            event.preventDefault();
+            const { x, y } = getXY(canvas, event);
+
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = 'black';
+
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        async function copySignature() {
+            const dataURL = canvas.toDataURL('image/png');
+            const message = document.getElementById('message');
+
+            try {
+                const blob = await (await fetch(dataURL)).blob();
+
+                await navigator.clipboard.write([
+                    new ClipboardItem({
+                        "image/png": blob
+                    })
+                ]);
+
+                message.textContent = "Signature copied to clipboard!";
+                message.className = "text-success"; // Tambahkan kelas Bootstrap untuk warna hijau
+            } catch (err) {
+                console.error('Failed to copy: ', err);
+                message.textContent = "Failed to copy signature (see console)";
+                message.className = "text-danger"; // Tambahkan kelas Bootstrap untuk warna merah
+            }
+        }
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        canvas.addEventListener('mousemove', draw);
+
+        canvas.addEventListener('touchstart', startDrawing);
+        canvas.addEventListener('touchend', stopDrawing);
+        canvas.addEventListener('touchcancel', stopDrawing);
+        canvas.addEventListener('touchmove', draw);
+
+        document.getElementById('clearBtn').addEventListener('click', clearCanvas);
+        document.getElementById('copyBtn').addEventListener('click', copySignature);
+    </script>
+</body>
+</html>
